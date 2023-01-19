@@ -1,89 +1,67 @@
 import cv2
 import pyautogui
+import numpy as np
 import time
-import numpy
 
-class ImageDetector:
-    def __init__(self, image_path):
-        self.image_path = image_path
+def click_image(image_file, threshold=0.9):
+    # Load image to be searched
+    image = cv2.imread(image_file, cv2.IMREAD_GRAYSCALE)
+    # Capture screenshot of entire screen
+    screenshot = pyautogui.screenshot()
+    # Convert screenshot to numpy array and grayscale
+    screenshot = np.array(screenshot)
+    screenshot = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+    # Search for image in screenshot using matchTemplate
+    result = cv2.matchTemplate(screenshot, image, cv2.TM_CCOEFF_NORMED)
+    # Get location of image on screen
+    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+    # Check if maximum value is greater than threshold
+    if max_val >= threshold:
+        # Calculate coordinates of center of image
+        top_left = max_loc
+        bottom_right = (top_left[0] + image.shape[1], top_left[1] + image.shape[0])
+        center = (int((bottom_right[0] - top_left[0])/2 + top_left[0]), int((bottom_right[1] - top_left[1])/2 + top_left[1]))
+        # Click on image
+        pyautogui.click(center)
+        return True
+    else:
+        return False
 
-    def detect_and_click(self):
-        while True:
-            # Take a screenshot of the entire screen
-            screenshot = pyautogui.screenshot()
-            # Convert the screenshot to a NumPy array
-            screenshot_np = cv2.cvtColor(numpy.array(screenshot), cv2.COLOR_RGB2BGR)
 
-            # Load the image to search for
-            image = cv2.imread(self.image_path)
-            # Check if the image is present in the screenshot
-            result = cv2.matchTemplate(screenshot_np, image, cv2.TM_CCOEFF_NORMED)
-            # Get the coordinates of the match
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-            if max_val > 0.9:
-                # Calculate the center of the match
-                center_x, center_y = max_loc[0] + image.shape[1] // 2, max_loc[1] + image.shape[0] // 2
-                # Click on the center of the match
-                pyautogui.click(center_x, center_y)
-                print("Clicked on the image!")
-                break
-            else:
-                # Wait for 1 second before checking again
-                time.sleep(3)
-
-class coordinates_click:
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        pyautogui.click(self.x, self.y)
-        print("Clicked on the coordinates!")
-
-# Create ImageDetector objects for each image
-detector1 = ImageDetector("Accept.png")
-detector2 = ImageDetector("Search.png")
-detector3 = ImageDetector("Ban_Inactive.png")
-detector4 = ImageDetector("Ban_Active.png")
-detector5 = ImageDetector("Lock_In.png")
-
-# Insert champion name
-pick_name = input("Enter champion name: ")
+# Prompt user for champion name and ban name
+champion_name = input("Enter champion name: ")
 ban_name = input("Enter ban name: ")
 
-import asyncio
+def run_detection_and_clicking_loop(image_file):
+    while not click_image(image_file):
+        time.sleep(1)
 
-async def run_detection_and_clicking_loop(detector, loop):
+def champion_pick_and_ban(variable):
+    run_detection_and_clicking_loop("Search.png")
+    pyautogui.typewrite(variable)
+    time.sleep(1)
+    pyautogui.click(962, 454)
+
+def start_game():
+    search_flag = False
     while True:
-        await detector.detect_and_click()
-        if loop==False:
-            break
-        else:
-            continue
+        if not search_flag:
+            try:
+                if click_image("Search.png"):
+                    search_flag = True
+                    break
+            except:
+                pass
+            click_image("Accept.png")
+        time.sleep(1)
 
-async def run_typing_loop(text):
-    while True:
-        pyautogui.typewrite(text)
-        break
+def main():
+    start_game()
+    champion_pick_and_ban(champion_name)
+    run_detection_and_clicking_loop("Ban_Inactive.png")
+    champion_pick_and_ban(ban_name)
+    run_detection_and_clicking_loop("Ban_Active.png")
+    run_detection_and_clicking_loop("Lock_In.png")
 
-async def run_sleeping_loop():
-    while True:
-        await asyncio.sleep(0.5)
-        coordinates_click(962, 454)
-        break
-
-async def async_main():
-    await asyncio.gather(
-        run_detection_and_clicking_loop(detector1, loop=True),
-        run_detection_and_clicking_loop(detector2 , loop=False),
-        run_typing_loop(pick_name),
-        run_sleeping_loop(),
-        run_detection_and_clicking_loop(detector3 , loop=False),
-        run_typing_loop(ban_name),
-        run_sleeping_loop(),
-        run_detection_and_clicking_loop(detector4 , loop=False),
-        run_detection_and_clicking_loop(detector5 , loop=False)
-    )
-
-asyncio.run(async_main())
-
-# q: How do I make a sub branch in a branch?
-
+if __name__ == "__main__":
+    main()
