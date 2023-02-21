@@ -1,0 +1,90 @@
+using OpenCvSharp;
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
+using System.Threading;
+
+public class ClickImage
+{
+    public static void click_image() {
+        // Load image to be searched
+        Mat image = Cv2.ImRead(image_file, ImreadModes.GrayScale);
+        // Capture screenshot of entire screen
+        Bitmap screenshot = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height, PixelFormat.Format32bppArgb);
+        Graphics graphics = Graphics.FromImage(screenshot);
+        graphics.CopyFromScreen(0, 0, 0, 0, screenshot.Size);
+        // Convert screenshot to numpy array and grayscale
+        Mat screenshot = Mat.FromImageData(screenshot, ImreadModes.GrayScale);
+        // Search for image in screenshot using matchTemplate
+        Mat result = screenshot.MatchTemplate(image, TemplateMatchModes.CCoeffNormed);
+        // Get location of image on screen
+        double min_val, max_val;
+        Point min_loc, max_loc;
+        Cv2.MinMaxLoc(result, out min_val, out max_val, out min_loc, out max_loc);
+        // Check if maximum value is greater than threshold
+        if (max_val >= threshold) {
+            // Calculate coordinates of center of image
+            Point top_left = max_loc;
+            Point bottom_right = (top_left[0] + image.Cols, top_left[1] + image.Rows);
+            Point center = (int((bottom_right[0] - top_left[0])/2 + top_left[0]), int((bottom_right[1] - top_left[1])/2 + top_left[1]));
+            // Click on image
+            Cursor.Position = new Point(center[0], center[1]);
+            Thread.Sleep(100);
+            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+            Thread.Sleep(100);
+            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    // Prompt user for champion name and ban name
+    string champion_name = Console.ReadLine("Enter champion name: ");
+    string ban_name = Console.ReadLine("Enter ban name: ");
+
+    public void run_detection_and_clicking_loop(string image_file) {
+        while (!click_image(image_file)) {
+            Thread.Sleep(1000);
+        }
+    }
+
+    public void champion_pick_and_ban(string variable) {
+        run_detection_and_clicking_loop("Search.png"); 
+        SendKeys.SendWait(champion_name); // Type champion name
+        Thread.Sleep(100);
+        SendKeys.SendWait("{ENTER}"); // Click on champion
+    }
+
+    public void start_game() {
+        bool search_flag = false;
+        while (true) {
+            if (!search_flag) {
+                try {
+                    if (click_image("Search.png")) {
+                        search_flag = true;
+                        break;
+                    }
+                }
+                catch {
+                }
+                click_image("Accept.png");
+            }
+            Thread.Sleep(1000);
+        }
+    }
+
+    public static void Main() {
+        start_game();
+        champion_pick_and_ban(champion_name);
+        run_detection_and_clicking_loop("Ban_Inactive.png");
+        champion_pick_and_ban(ban_name);
+        run_detection_and_clicking_loop("Ban_Active.png");
+        run_detection_and_clicking_loop("Lock_In.png");
+    }
+}
+
+// Run the program
+ClickImage.Main();

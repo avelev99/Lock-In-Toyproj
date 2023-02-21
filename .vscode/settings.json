@@ -1,0 +1,5 @@
+{
+    "chatgpt.authenticationType": "Google Authentication",
+    "chatgpt.chromiumPath": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "chatgpt.method": "Browser Auto-login"
+}
